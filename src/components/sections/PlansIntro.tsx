@@ -46,8 +46,7 @@ const benefits = [
   "Suporte técnico personalizado",
 ];
 
-const WHATSAPP_URL =
-  "https://wa.me/5561995827488?text=Ol%C3%A1%2C%20fiz%20o%20pagamento%20e%20gostaria%20de%20acessar%20meu%20plano";
+const WHATSAPP_NUMBER = "5561995827488";
 
 function formatCPFOrCNPJ(value: string) {
   const numbers = value.replace(/\D/g, "");
@@ -92,17 +91,46 @@ export function PlansIntro() {
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [phone, setPhone] = useState("");
 
+  const [copied, setCopied] = useState(false);
+
   const closeAllModals = () => {
     setSelectedPlan(null);
     setPaymentOpen(false);
+    setCopied(false);
   };
 
   const openPlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setPaymentOpen(false);
+    setCopied(false);
   };
 
+  /*
+   * Validação dos dados obrigatórios.
+   *
+   * Nome:
+   * precisa ter pelo menos 2 caracteres.
+   *
+   * CPF/CNPJ:
+   * aceita 11 dígitos para CPF ou 14 para CNPJ.
+   *
+   * Telefone:
+   * aceita 10 ou 11 dígitos.
+   */
+  const cleanCpfCnpj = cpfCnpj.replace(/\D/g, "");
+  const cleanPhone = phone.replace(/\D/g, "");
+
+  const isFormValid =
+    name.trim().length >= 2 &&
+    (cleanCpfCnpj.length === 11 || cleanCpfCnpj.length === 14) &&
+    (cleanPhone.length === 10 || cleanPhone.length === 11);
+
   const generatePix = () => {
+    if (!selectedPlan || !isFormValid) {
+      return;
+    }
+
+    setCopied(false);
     setPaymentOpen(true);
   };
 
@@ -130,11 +158,50 @@ export function PlansIntro() {
     };
   }, [selectedPlan]);
 
-  const qrCodeData = encodeURIComponent(
-    `PIX EDU UNITV - Plano ${selectedPlan?.name ?? ""} - Valor R$ ${
-      selectedPlan?.price ?? ""
-    }${selectedPlan?.cents ?? ""}`
-  );
+  /*
+   * Conteúdo usado atualmente pelo QR Code.
+   *
+   * IMPORTANTE:
+   * Esse texto é o mesmo conteúdo que já era utilizado
+   * no QR Code anterior. Para um Pix real "copia e cola",
+   * esse valor deverá ser substituído pelo payload Pix
+   * fornecido pelo gateway/sistema de pagamento.
+   */
+  const pixCode = `PIX EDU UNITV - Plano ${
+    selectedPlan?.name ?? ""
+  } - Valor R$ ${selectedPlan?.price ?? ""}${selectedPlan?.cents ?? ""}`;
+
+  const qrCodeData = encodeURIComponent(pixCode);
+
+  /*
+   * Mensagem automática enviada para o WhatsApp.
+   */
+  const whatsappMessage = selectedPlan
+    ? `Olá, sou ${name.trim()}, CPF/CNPJ ${cpfCnpj}, Telefone ${phone}, fiz o pagamento e quero ativar meu plano.
+
+Plano: ${selectedPlan.name}
+Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
+    : "";
+
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    whatsappMessage
+  )}`;
+
+  /*
+   * Copiar código PIX.
+   */
+  const copyPixCode = async () => {
+    try {
+      await navigator.clipboard.writeText(pixCode);
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2500);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   return (
     <>
@@ -329,28 +396,41 @@ export function PlansIntro() {
                 {/* NOME */}
 
                 <div>
-                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">
-                    Nome completo
+                  <label
+                    htmlFor="nome-recarga"
+                    className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-[#D4AF37]"
+                  >
+                    Nome completo *
                   </label>
 
                   <input
+                    id="nome-recarga"
                     type="text"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Seu nome completo"
                     autoComplete="name"
-                    className="h-11 w-full border border-zinc-700 bg-zinc-900/70 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[#D4AF37]"
+                    required
+                    className={`h-11 w-full border bg-zinc-900/70 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 ${
+                      name.trim().length > 0
+                        ? "border-zinc-700 focus:border-[#D4AF37]"
+                        : "border-zinc-700 focus:border-[#D4AF37]"
+                    }`}
                   />
                 </div>
 
                 {/* CPF / CNPJ */}
 
                 <div>
-                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">
-                    CPF ou CNPJ
+                  <label
+                    htmlFor="cpf-cnpj-recarga"
+                    className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-[#D4AF37]"
+                  >
+                    CPF ou CNPJ *
                   </label>
 
                   <input
+                    id="cpf-cnpj-recarga"
                     type="text"
                     value={cpfCnpj}
                     onChange={(event) =>
@@ -360,18 +440,31 @@ export function PlansIntro() {
                     inputMode="numeric"
                     autoComplete="off"
                     maxLength={18}
+                    required
                     className="h-11 w-full border border-zinc-700 bg-zinc-900/70 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[#D4AF37]"
                   />
+
+                  {cpfCnpj.length > 0 &&
+                    cleanCpfCnpj.length !== 11 &&
+                    cleanCpfCnpj.length !== 14 && (
+                      <p className="mt-1 text-[9px] text-red-400">
+                        Digite um CPF com 11 dígitos ou CNPJ com 14 dígitos.
+                      </p>
+                    )}
                 </div>
 
                 {/* WHATSAPP */}
 
                 <div>
-                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-[#D4AF37]">
-                    WhatsApp para contato
+                  <label
+                    htmlFor="whatsapp-recarga"
+                    className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-[#D4AF37]"
+                  >
+                    WhatsApp para contato *
                   </label>
 
                   <input
+                    id="whatsapp-recarga"
                     type="tel"
                     value={phone}
                     onChange={(event) =>
@@ -381,8 +474,17 @@ export function PlansIntro() {
                     inputMode="numeric"
                     autoComplete="tel"
                     maxLength={15}
+                    required
                     className="h-11 w-full border border-zinc-700 bg-zinc-900/70 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[#D4AF37]"
                   />
+
+                  {phone.length > 0 &&
+                    cleanPhone.length !== 10 &&
+                    cleanPhone.length !== 11 && (
+                      <p className="mt-1 text-[9px] text-red-400">
+                        Digite um número de WhatsApp válido.
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -391,9 +493,16 @@ export function PlansIntro() {
               <button
                 type="button"
                 onClick={generatePix}
-                className="mt-5 flex min-h-[46px] w-full items-center justify-center bg-[#D4AF37] px-5 py-3 text-center text-[11px] font-black uppercase tracking-[0.08em] text-black transition hover:bg-[#E8C95A]"
+                disabled={!isFormValid}
+                className={`mt-5 flex min-h-[46px] w-full items-center justify-center px-5 py-3 text-center text-[11px] font-black uppercase tracking-[0.08em] transition-all duration-200 ${
+                  isFormValid
+                    ? "cursor-pointer bg-[#D4AF37] text-black hover:bg-[#E8C95A]"
+                    : "cursor-not-allowed bg-zinc-800 text-zinc-500"
+                }`}
               >
-                GERAR PAGAMENTO PIX
+                {isFormValid
+                  ? "GERAR PAGAMENTO PIX"
+                  : "PREENCHA TODOS OS DADOS"}
               </button>
 
               {/* CANCELAR */}
@@ -471,7 +580,7 @@ export function PlansIntro() {
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrCodeData}`}
                   alt="QR Code para pagamento PIX"
-                  className="h-[185px] w-[185px] sm:h-[205px] sm:w-[205px]"
+                  className="h-[175px] w-[175px] sm:h-[195px] sm:w-[195px]"
                 />
               </div>
 
@@ -479,6 +588,41 @@ export function PlansIntro() {
                 Aponte a câmera do seu celular para o QR Code e realize o
                 pagamento.
               </p>
+
+              {/* =========================
+                  COPIAR CÓDIGO PIX
+              ========================== */}
+
+              <div className="mt-3 text-left">
+                <label
+                  htmlFor="codigo-pix"
+                  className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-[#D4AF37]"
+                >
+                  Código PIX
+                </label>
+
+                <div className="flex w-full overflow-hidden border border-zinc-700 bg-black/70">
+                  <input
+                    id="codigo-pix"
+                    type="text"
+                    value={pixCode}
+                    readOnly
+                    className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-[9px] text-zinc-400 outline-none sm:text-[10px]"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={copyPixCode}
+                    className={`shrink-0 border-l border-[#D4AF37]/40 px-3 py-2.5 text-[9px] font-black uppercase tracking-wide transition sm:px-4 ${
+                      copied
+                        ? "bg-[#D4AF37] text-black"
+                        : "text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black"
+                    }`}
+                  >
+                    {copied ? "COPIADO!" : "COPIAR"}
+                  </button>
+                </div>
+              </div>
 
               {/* CONFIRMAÇÃO */}
 
@@ -492,8 +636,10 @@ export function PlansIntro() {
                   pagamento e ativar seu plano.
                 </p>
 
+                {/* WHATSAPP COM DADOS DO CLIENTE */}
+
                 <a
-                  href={WHATSAPP_URL}
+                  href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-3 flex min-h-[44px] w-full items-center justify-center bg-[#D4AF37] px-4 py-2.5 text-center text-[9px] font-black uppercase leading-4 tracking-[0.04em] text-black transition hover:bg-[#E8C95A] sm:text-[10px]"
