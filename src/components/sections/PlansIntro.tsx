@@ -6,6 +6,7 @@ type Plan = {
   cents: string;
   description: string;
   popular: boolean;
+  pixCode: string;
 };
 
 const plans: Plan[] = [
@@ -15,27 +16,38 @@ const plans: Plan[] = [
     cents: ",99",
     description: "",
     popular: false,
+    pixCode:
+      "00020101021226840014BR.GOV.BCB.PIX0136c2034448-a015-4d34-abbd-abe6aaf1a5310222Pagamento eduimportsev520400005303986540524.995802BR5925FABIO EDUARDO SOUSA DE OL6007FORMOSA62290525QRCCfloSw27UMsV9gx3DnshPg6304617F",
   },
+
   {
     name: "Trimestral",
     price: "69",
     cents: ",99",
     description: "ECONOMIA GARANTIDA",
     popular: true,
+    pixCode:
+      "00020101021226840014BR.GOV.BCB.PIX0136c2034448-a015-4d34-abbd-abe6aaf1a5310222Pagamento eduimportsev520400005303986540569.995802BR5925FABIO EDUARDO SOUSA DE OL6007FORMOSA62290525QRCCzAPC2uzWLUNmfq7VJeo0e6304770C",
   },
+
   {
     name: "Semestral",
     price: "119",
     cents: ",99",
     description: "",
     popular: false,
+    pixCode:
+      "00020101021226840014BR.GOV.BCB.PIX0136c2034448-a015-4d34-abbd-abe6aaf1a5310222Pagamento eduimportsev5204000053039865406119.995802BR5925FABIO EDUARDO SOUSA DE OL6007FORMOSA62290525QRCC9I4R8Fh1pQlWrBXfVoe2L6304E813",
   },
+
   {
     name: "Anual",
     price: "169",
     cents: ",99",
     description: "MELHOR CUSTO-BENEFÍCIO",
     popular: false,
+    pixCode:
+      "00020101021226840014BR.GOV.BCB.PIX0136c2034448-a015-4d34-abbd-abe6aaf1a5310222Pagamento eduimportsev5204000053039865406169.995802BR5925FABIO EDUARDO SOUSA DE OL6007FORMOSA62290525QRCCeTyZMmBLASAWk2YGNv21n6304D392",
   },
 ];
 
@@ -105,18 +117,6 @@ export function PlansIntro() {
     setCopied(false);
   };
 
-  /*
-   * Validação dos dados obrigatórios.
-   *
-   * Nome:
-   * precisa ter pelo menos 2 caracteres.
-   *
-   * CPF/CNPJ:
-   * aceita 11 dígitos para CPF ou 14 para CNPJ.
-   *
-   * Telefone:
-   * aceita 10 ou 11 dígitos.
-   */
   const cleanCpfCnpj = cpfCnpj.replace(/\D/g, "");
   const cleanPhone = phone.replace(/\D/g, "");
 
@@ -159,22 +159,33 @@ export function PlansIntro() {
   }, [selectedPlan]);
 
   /*
-   * Conteúdo usado atualmente pelo QR Code.
-   *
    * IMPORTANTE:
-   * Esse texto é o mesmo conteúdo que já era utilizado
-   * no QR Code anterior. Para um Pix real "copia e cola",
-   * esse valor deverá ser substituído pelo payload Pix
-   * fornecido pelo gateway/sistema de pagamento.
+   *
+   * O código PIX agora vem diretamente do plano selecionado.
+   *
+   * Portanto:
+   *
+   * Mensal     -> payload de R$ 24,99
+   * Trimestral -> payload de R$ 69,99
+   * Semestral  -> payload de R$ 119,99
+   * Anual      -> payload de R$ 169,99
+   *
+   * O QR Code abaixo também usa exatamente este payload.
    */
-  const pixCode = `PIX EDU UNITV - Plano ${
-    selectedPlan?.name ?? ""
-  } - Valor R$ ${selectedPlan?.price ?? ""}${selectedPlan?.cents ?? ""}`;
+  const pixCode = selectedPlan?.pixCode ?? "";
 
+  /*
+   * O QR Code é gerado a partir do PAYLOAD PIX REAL.
+   *
+   * Não estamos mais colocando um texto como:
+   * "PIX EDU UNITV - Plano..."
+   *
+   * O conteúdo enviado ao gerador é o código PIX completo.
+   */
   const qrCodeData = encodeURIComponent(pixCode);
 
   /*
-   * Mensagem automática enviada para o WhatsApp.
+   * Mensagem enviada automaticamente para o WhatsApp.
    */
   const whatsappMessage = selectedPlan
     ? `Olá, sou ${name.trim()}, CPF/CNPJ ${cpfCnpj}, Telefone ${phone}, fiz o pagamento e quero ativar meu plano.
@@ -188,7 +199,7 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
   )}`;
 
   /*
-   * Copiar código PIX.
+   * Copiar o PAYLOAD PIX REAL.
    */
   const copyPixCode = async () => {
     try {
@@ -205,9 +216,9 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
 
   return (
     <>
-      {/* =========================
+      {/* =====================================================
           SEÇÃO DOS PLANOS
-      ========================== */}
+      ====================================================== */}
 
       <section
         id="planos"
@@ -323,9 +334,9 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
         </div>
       </section>
 
-      {/* =========================
+      {/* =====================================================
           MODAL DOS DADOS
-      ========================== */}
+      ====================================================== */}
 
       {selectedPlan && !paymentOpen && (
         <div
@@ -411,11 +422,7 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
                     placeholder="Seu nome completo"
                     autoComplete="name"
                     required
-                    className={`h-11 w-full border bg-zinc-900/70 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 ${
-                      name.trim().length > 0
-                        ? "border-zinc-700 focus:border-[#D4AF37]"
-                        : "border-zinc-700 focus:border-[#D4AF37]"
-                    }`}
+                    className="h-11 w-full border border-zinc-700 bg-zinc-900/70 px-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-[#D4AF37]"
                   />
                 </div>
 
@@ -447,7 +454,7 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
                   {cpfCnpj.length > 0 &&
                     cleanCpfCnpj.length !== 11 &&
                     cleanCpfCnpj.length !== 14 && (
-                      <p className="mt-1 text-[9px] text-red-400">
+                      <p className="mt-1 text-[9px] text-[#D4AF37]">
                         Digite um CPF com 11 dígitos ou CNPJ com 14 dígitos.
                       </p>
                     )}
@@ -481,7 +488,7 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
                   {phone.length > 0 &&
                     cleanPhone.length !== 10 &&
                     cleanPhone.length !== 11 && (
-                      <p className="mt-1 text-[9px] text-red-400">
+                      <p className="mt-1 text-[9px] text-[#D4AF37]">
                         Digite um número de WhatsApp válido.
                       </p>
                     )}
@@ -519,9 +526,9 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
         </div>
       )}
 
-      {/* =========================
+      {/* =====================================================
           MODAL DO PIX
-      ========================== */}
+      ====================================================== */}
 
       {selectedPlan && paymentOpen && (
         <div
@@ -574,12 +581,14 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
                 </span>
               </p>
 
-              {/* QR CODE */}
+              {/* =================================================
+                  QR CODE
+              ================================================== */}
 
               <div className="mx-auto mt-3 flex w-fit items-center justify-center rounded-lg border-4 border-white bg-white p-2">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrCodeData}`}
-                  alt="QR Code para pagamento PIX"
+                  alt={`QR Code PIX do plano ${selectedPlan.name}`}
                   className="h-[175px] w-[175px] sm:h-[195px] sm:w-[195px]"
                 />
               </div>
@@ -589,9 +598,9 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
                 pagamento.
               </p>
 
-              {/* =========================
-                  COPIAR CÓDIGO PIX
-              ========================== */}
+              {/* =================================================
+                  CÓDIGO PIX COPIA E COLA
+              ================================================== */}
 
               <div className="mt-3 text-left">
                 <label
@@ -624,7 +633,9 @@ Valor: R$ ${selectedPlan.price}${selectedPlan.cents}`
                 </div>
               </div>
 
-              {/* CONFIRMAÇÃO */}
+              {/* =================================================
+                  CONFIRMAÇÃO
+              ================================================== */}
 
               <div className="mt-4 border-t border-[#D4AF37]/30 pt-3">
                 <h3 className="text-base font-black uppercase tracking-wide text-white sm:text-lg">
