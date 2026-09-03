@@ -1,7 +1,7 @@
 export function WhatsAppButton() {
   return (
     <a
-      href="https://wa.me/SEU_NUMERO"
+      href="https://wa.me/5561995827488?text=Ol%C3%A1"
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Falar pelo WhatsApp"
